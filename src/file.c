@@ -2,6 +2,10 @@
 ** file.c - File class
 */
 
+#if defined(_WIN32) || defined(_WIN64) || defined(WIN32) || defined(WIN64)
+  #define OS_WINDOWS
+#endif
+
 #include "mruby.h"
 
 #include "mruby/ext/io.h"
@@ -165,7 +169,17 @@ mrb_file_dirname(mrb_state *mrb, mrb_value klass)
   mrb_value s;
   mrb_get_args(mrb, "S", &s);
   path = mrb_str_to_cstr(mrb, s);
+  #ifdef OS_WINDOWS
+  _splitpath_s(
+    (const char*)path,
+    vname, _MAX_DRIVE,
+    dname, _MAX_DIR,
+    NULL, 0,
+    NULL, 0
+  );
+  #else
   _splitpath((const char*)path, vname, dname, NULL, NULL);
+  #endif
   sprintf_s(buffer, _MAX_DRIVE + _MAX_DIR, "%s%s", vname, dname);
   return mrb_str_new_cstr(mrb, buffer);
   #else
@@ -192,7 +206,17 @@ mrb_file_basename(mrb_state *mrb, mrb_value klass)
   mrb_value s;
   mrb_get_args(mrb, "S", &s);
   path = mrb_str_to_cstr(mrb, s);
+  #ifdef OS_WINDOWS
+  _splitpath_s(
+    (const char*)path,
+    NULL, 0,
+    NULL, 0,
+    bname, _MAX_DIR,
+    extname, _MAX_EXT
+  );
+  #else
   _splitpath((const char*)path, NULL, NULL, bname, extname);
+  #endif
   sprintf_s(buffer, _MAX_DIR + _MAX_EXT, "%s%s", bname, extname);
   return mrb_str_new_cstr(mrb, buffer);
   #else
@@ -240,8 +264,12 @@ mrb_file_size(mrb_state *mrb, mrb_value klass)
 
   mrb_get_args(mrb, "S", &s);
   cp = mrb_str_to_cstr(mrb, s);
+  #ifdef OS_WINDOWS
+  if ( fopen_s( &fp, cp, "rb") != 0 ) {
+  #else
   fp = fopen(cp, "rb");
   if (fp == NULL) {
+  #endif
     mrb_sys_fail(mrb, "fopen");
     return mrb_nil_value();
   }

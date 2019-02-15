@@ -2,6 +2,10 @@
 ** io.c - IO class
 */
 
+#if defined(_WIN32) || defined(_WIN64) || defined(WIN32) || defined(WIN64)
+  #define OS_WINDOWS
+#endif
+
 #include "mruby.h"
 #include "mruby/hash.h"
 #include "mruby/array.h"
@@ -200,7 +204,11 @@ io_open(mrb_state *mrb, mrb_value path, int flags, int perm)
   pat = mrb_string_value_cstr(mrb, &path);
   modenum = mrb_io_flags_to_modenum(mrb, flags);
 
+  #ifdef OS_WINDOWS
+  return _open(pat, modenum, perm);
+  #else
   return open(pat, modenum, perm);
+  #endif
 }
 
 #ifndef NOFILE
